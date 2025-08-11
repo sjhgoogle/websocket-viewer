@@ -1,13 +1,15 @@
-import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { defineConfig } from "vite";
+import preact from "@preact/preset-vite";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [preact(), tailwindcss()],
+
   server: {
     port: 5000,
     proxy: {
-      '/api': 'http://localhost:3000', // 백엔드 API 프록시
+      "/api": "http://localhost:3000", // 백엔드 API 프록시
     },
   },
-})
+});
