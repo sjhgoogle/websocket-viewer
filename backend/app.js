@@ -1,33 +1,101 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+const net = require("net");
+const fs = require("fs");
+const crypto = require("crypto");
+const path = require("path");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = 3000;
 
-// // API 예시
-app.get('/api/ping', (req, res) => {
-    console.log(99, req)
-  res.json({ message: 'Hello from Express!' });
-});
+const server = net.createServer((socket) => {
+  console.log("Client connected");
+  socket.on("error", (err) => {
+    console.log("Socket error:", err.message);
+    // Don't crash the server, just log the error
+  });
+  socket.on("close", () => {
+    console.log("Socket closed");
+  });
 
-app.get('/api/{*splat}', async (req, res) => {
-    res.status(500).json({ 
-        url: req.originalUrl,
+  socket.on("data", (data) => {
+    console.log("Received:");
+    console.log(data.toString());
+    const text = data.toString();
+
+    const [headerPart, bodyPart] = text.split("\r\n\r\n");
+    const headerParts = headerPart.split("\r\n");
+
+    const requestLine = headerParts[0];
+    const headerLine = headerParts.slice(1);
+
+    const [method, _reqPath, version] = requestLine.split(" ");
+    const reqPath = _reqPath === "/" ? "/index.html" : _reqPath;
+
+    const headers = {};
+    headerLine.forEach((line) => {
+      const [key, value] = line.split(": ");
+      headers[key] = value;
     });
+
+    console.log("headers:", headers);
+    console.log("method:", method);
+    console.log("path:", reqPath);
+    console.log("version:", version);
+
+    let body = bodyPart;
+    if (headers["Content-Type"] === "application/json") {
+      const body = JSON.parse(body);
+      console.log("json:", json);
+    }
+
+    console.log("body:", body);
+
+    // ######################## parse fin
+    // ######################## parse fin
+    // ######################## parse fin
+
+    const targetPath = path.join(__dirname, "../frontend/dist", reqPath);
+    console.log("🚀 ~ targetPath:", targetPath);
+    console.log("🚀 ~ targetPath:", fs.existsSync(targetPath));
+    if (!fs.existsSync(targetPath)) {
+      const response = [
+        "HTTP/1.1 404 Not Found",
+        "Content-Type: text/html",
+        "",
+        "",
+      ].join("\r\n");
+      socket.write(response);
+      socket.end();
+      return;
+    }
+
+    const resbody = fs.readFileSync(
+      path.join(__dirname, "../frontend/dist", reqPath),
+      "utf-8"
+    );
+
+    const reqExtension = path.extname(reqPath).toLowerCase();
+    let contentType = "text/plain";
+    if (reqExtension === ".html") {
+      contentType = "text/html";
+    } else if (reqExtension === ".css") {
+      contentType = "text/css";
+    } else if (reqExtension === ".js") {
+      contentType = "application/javascript";
+    }
+
+    const response = [
+      "HTTP/1.1 200 OK",
+      `Content-Type: ${contentType}`,
+      "",
+      resbody,
+    ].join("\r\n");
+    socket.write(response);
+    socket.end();
+  });
+  socket.on("close", () => {
+    console.log("TCP client disconnected");
+  });
 });
 
-
-// Svelte 정적 파일 서빙
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// SPA 라우팅 처리 (404 방지)
-app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
