@@ -41,7 +41,9 @@ export function Home() {
                 buffer data visualization
               </p>
               <div class="card-actions justify-center">
-                <button class="btn btn-primary btn-lg">Start Demo</button>
+                <a href="/demo" class="btn btn-primary btn-lg">
+                  Start Demo
+                </a>
               </div>
             </div>
           </div>

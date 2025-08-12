@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@preact/signals": "^2.2.1",
     "@tailwindcss/vite": "^4.1.11",
     "daisyui": "^5.0.50",
     "preact": "^10.27.0",

@@ -1,211 +1,294 @@
 import { Router, useRoute, useLocation } from "preact-iso";
 import { Header } from "./common/header";
+import { signal, useSignalEffect } from "@preact/signals";
 
 export function Demo() {
+  const count = signal(0);
+  const wsUrl = signal("ws://localhost:3000");
+  const isWsConnected = signal(false);
+
+  function asdf() {
+    count.value++;
+  }
+
+  async function connectWs() {
+    const ws = new WebSocket(wsUrl.value);
+    ws.onopen = () => {
+      console.log("ws connected");
+      isWsConnected.value = true;
+
+      ws.send("abcde");
+    };
+
+    ws.onmessage = (event) => {
+      console.log("ws message", event.data);
+    };
+  }
+
+  async function disconnectWs() {}
+
+  useSignalEffect(() => {
+    console.log("isWsConnected", isWsConnected.value);
+  }, [isWsConnected]);
+
   return (
     <div class="bg-gray-50 min-h-screen">
       <Header />
       <div class="container mx-auto px-4 py-8">
-        <div class="grid md:grid-cols-2 gap-8 mb-8">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              WebSocket URL
-            </label>
-            <div class="flex space-x-2">
+        {/* Connection Controls */}
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-2">
+                <div
+                  class={`w-3 h-3 rounded-full ${
+                    isWsConnected.value ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></div>
+                <span class="text-sm font-medium text-gray-700">
+                  {isWsConnected.value ? "Connected" : "Disconnected"}
+                </span>
+              </div>
+              <span class="text-sm text-gray-500">|</span>
+              <span class="text-sm text-gray-600 font-mono">{wsUrl.value}</span>
+            </div>
+            <div class="flex space-x-3">
+              {isWsConnected.value ? (
+                <button onClick={disconnectWs} class="btn btn-error btn-sm">
+                  Disconnect
+                </button>
+              ) : (
+                <button onClick={connectWs} class="btn btn-primary btn-sm">
+                  Connect
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Chat Interface */}
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          {/* Chat Header */}
+          <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-bold text-white">
+                WebSocket Communication
+              </h2>
+              <div class="flex items-center space-x-4 text-white text-sm">
+                <div class="flex items-center space-x-2">
+                  <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>Live</span>
+                </div>
+                <span>|</span>
+                <span>Real-time Protocol Analysis</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Messages */}
+          <div class="p-6 space-y-6 max-h-96 overflow-y-auto">
+            {/* Client Message - Connection Request */}
+            <div class="flex justify-start">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  C
+                </div>
+                <div class="bg-blue-100 rounded-2xl rounded-tl-md px-4 py-3">
+                  <div class="text-sm font-medium text-blue-900 mb-1">
+                    Client
+                  </div>
+                  <div class="text-sm text-blue-800">
+                    <div class="font-mono text-xs bg-blue-200 rounded px-2 py-1 mb-2">
+                      GET / HTTP/1.1
+                    </div>
+                    <div class="text-xs space-y-1">
+                      <div>Upgrade: websocket</div>
+                      <div>Connection: Upgrade</div>
+                      <div>Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==</div>
+                    </div>
+                  </div>
+                  <div class="text-xs text-blue-600 mt-2">오후 5:59:49</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Server Response - Connection Established */}
+            <div class="flex justify-end">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="bg-green-100 rounded-2xl rounded-tr-md px-4 py-3">
+                  <div class="text-sm font-medium text-green-900 mb-1">
+                    Server
+                  </div>
+                  <div class="text-sm text-green-800">
+                    <div class="font-mono text-xs bg-green-200 rounded px-2 py-1 mb-2">
+                      HTTP/1.1 101 Switching Protocols
+                    </div>
+                    <div class="text-xs space-y-1">
+                      <div>Upgrade: websocket</div>
+                      <div>Connection: Upgrade</div>
+                      <div>Sec-WebSocket-Accept: calculated-hash-value</div>
+                    </div>
+                  </div>
+                  <div class="text-xs text-green-600 mt-2">오후 5:59:49</div>
+                </div>
+                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  S
+                </div>
+              </div>
+            </div>
+
+            {/* Server Message - Welcome */}
+            <div class="flex justify-end">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="bg-green-100 rounded-2xl rounded-tr-md px-4 py-3">
+                  <div class="text-sm font-medium text-green-900 mb-1">
+                    Server
+                  </div>
+                  <div class="text-sm text-green-800">
+                    <div class="font-mono text-xs bg-green-200 rounded px-2 py-1 mb-2">
+                      Text Frame (0x81)
+                    </div>
+                    <div class="text-xs">
+                      <span class="text-gray-500">Raw:</span>
+                      <div class="bg-gray-900 text-green-400 p-2 rounded mt-1 font-mono">
+                        82 65 71 75 65 73 74 20 73 65 72 76 65 64 20 62 79 20 64
+                        35 36 38 33 32 34 63 30 38 66
+                      </div>
+                      <span class="text-gray-500">Parsed:</span> Request served
+                      by d568324c08fc
+                    </div>
+                  </div>
+                  <div class="text-xs text-green-600 mt-2">오후 5:59:49</div>
+                </div>
+                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  S
+                </div>
+              </div>
+            </div>
+
+            {/* Client Message - Ping */}
+            <div class="flex justify-start">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  C
+                </div>
+                <div class="bg-blue-100 rounded-2xl rounded-tl-md px-4 py-3">
+                  <div class="text-sm font-medium text-blue-900 mb-1">
+                    Client
+                  </div>
+                  <div class="text-sm text-blue-800">
+                    <div class="font-mono text-xs bg-blue-200 rounded px-2 py-1 mb-2">
+                      Ping Frame (0x89)
+                    </div>
+                    <div class="text-xs">
+                      <span class="text-gray-500">Raw:</span>
+                      <div class="bg-gray-900 text-green-400 p-2 rounded mt-1 font-mono">
+                        89 84 79 6f 8e 67
+                      </div>
+                      <span class="text-gray-500">Payload:</span> ping
+                    </div>
+                  </div>
+                  <div class="text-xs text-blue-600 mt-2">오후 5:59:50</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Server Response - Pong */}
+            <div class="flex justify-end">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="bg-green-100 rounded-2xl rounded-tr-md px-4 py-3">
+                  <div class="text-sm font-medium text-green-900 mb-1">
+                    Server
+                  </div>
+                  <div class="text-sm text-green-800">
+                    <div class="font-mono text-xs bg-green-200 rounded px-2 py-1 mb-2">
+                      Pong Frame (0x8a)
+                    </div>
+                    <div class="text-xs">
+                      <span class="text-gray-500">Raw:</span>
+                      <div class="bg-gray-400 p-2 rounded mt-1 font-mono">
+                        8a 84 7a 6f 8e 67
+                      </div>
+                      <span class="text-gray-500">Payload:</span> pong
+                    </div>
+                  </div>
+                  <div class="text-xs text-green-600 mt-2">오후 5:59:50</div>
+                </div>
+                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  S
+                </div>
+              </div>
+            </div>
+
+            {/* Client Message - Text */}
+            <div class="flex justify-start">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  C
+                </div>
+                <div class="bg-blue-100 rounded-2xl rounded-tl-md px-4 py-3">
+                  <div class="text-sm font-medium text-blue-900 mb-1">
+                    Client
+                  </div>
+                  <div class="text-sm text-blue-800">
+                    <div class="font-mono text-xs bg-blue-200 rounded px-2 py-1 mb-2">
+                      Text Frame (0x81)
+                    </div>
+                    <div class="text-xs">
+                      <span class="text-gray-500">Message:</span> Hello
+                      WebSocket!
+                    </div>
+                  </div>
+                  <div class="text-xs text-blue-600 mt-2">오후 5:59:51</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Server Response - Echo */}
+            <div class="flex justify-end">
+              <div class="flex items-start space-x-3 max-w-lg">
+                <div class="bg-green-100 rounded-2xl rounded-tr-md px-4 py-3">
+                  <div class="text-sm font-medium text-green-900 mb-1">
+                    Server
+                  </div>
+                  <div class="text-sm text-green-800">
+                    <div class="font-mono text-xs bg-green-200 rounded px-2 py-1 mb-2">
+                      Text Frame (0x81)
+                    </div>
+                    <div class="text-xs">
+                      <span class="text-gray-500">Echo:</span> Hello WebSocket!
+                    </div>
+                  </div>
+                  <div class="text-xs text-green-600 mt-2">오후 5:59:51</div>
+                </div>
+                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  S
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div class="border-t border-gray-200 p-4 bg-gray-50">
+            <div class="flex space-x-3">
               <input
                 type="text"
-                value="wss://echo.websocket.org/"
-                class="input input-bordered flex-1"
-                readonly
+                placeholder="Type a message to send..."
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <button class="btn btn-error">Disconnect</button>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Message to Send
-            </label>
-            <div class="flex space-x-2">
-              <input
-                type="text"
-                value="Hello WebSocket!"
-                class="input input-bordered flex-1"
-                placeholder="Enter message..."
-              />
-              <button class="btn btn-primary">Send</button>
+              <button class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Send
+              </button>
+              <button class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Ping
+              </button>
             </div>
           </div>
         </div>
 
-        <div class="flex space-x-4 mb-8">
-          <button class="btn btn-secondary">Send Ping</button>
-          <button class="btn btn-ghost">Clear Logs</button>
-        </div>
-
-        <div class="card bg-white shadow-sm">
-          <div class="card-header px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold">Protocol Log</h2>
-          </div>
-          <div class="card-body p-6">
-            <div class="space-y-6">
-              <div class="border-l-4 border-blue-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      Initiating WebSocket Connection
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:49</span>
-                </div>
-                <p class="text-sm text-gray-600 ml-4">
-                  Connecting to: wss://echo.websocket.org/
-                </p>
-              </div>
-
-              <div class="border-l-4 border-blue-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      Client → Server: HTTP Upgrade Request
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:49</span>
-                </div>
-                <div class="ml-4 bg-gray-50 rounded p-3 text-sm font-mono text-gray-700">
-                  <div class="text-xs text-gray-500 mb-1">Headers:</div>
-                  <div>Upgrade: websocket</div>
-                  <div>Connection: Upgrade</div>
-                  <div>Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==</div>
-                  <div>Sec-WebSocket-Version: 13</div>
-                </div>
-              </div>
-
-              <div class="border-l-4 border-green-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      Server → Client: HTTP 101 Switching Protocols
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:49</span>
-                </div>
-                <div class="ml-4 bg-gray-50 rounded p-3 text-sm font-mono text-gray-700">
-                  <div class="text-xs text-gray-500 mb-1">Headers:</div>
-                  <div>HTTP/1.1: 101 Switching Protocols</div>
-                  <div>Upgrade: websocket</div>
-                  <div>Connection: Upgrade</div>
-                  <div>Sec-WebSocket-Accept: calculated-hash-value</div>
-                </div>
-              </div>
-
-              <div class="border-l-4 border-green-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      WebSocket Connection Established
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:49</span>
-                </div>
-                <p class="text-sm text-gray-600 ml-4">
-                  Ready to exchange frames
-                </p>
-              </div>
-
-              <div class="border-l-4 border-purple-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      Server → Client: Text Frame
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:49</span>
-                </div>
-                <div class="ml-4 space-y-2">
-                  <div class="bg-gray-900 rounded p-3">
-                    <div class="text-xs text-gray-400 mb-2">
-                      Raw Buffer (Hex):
-                    </div>
-                    <div class="text-xs font-mono text-green-400 break-all">
-                      82 65 71 75 65 73 74 20 73 65 72 76 65 64 20 62 79 20 64
-                      35 36 38 33 32 34 63 30 38 66
-                    </div>
-                  </div>
-                  <div class="text-sm">
-                    <span class="text-gray-500">Parsed String:</span>
-                    <br />
-                    <span class="text-blue-600">
-                      Request served by d568324c08fc
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="border-l-4 border-orange-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      Client → Server: Ping Frame
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:50</span>
-                </div>
-                <div class="ml-4 space-y-2">
-                  <div class="bg-gray-900 rounded p-3">
-                    <div class="text-xs text-gray-400 mb-2">
-                      Raw Buffer (Hex):
-                    </div>
-                    <div class="text-xs font-mono text-green-400 break-all">
-                      89 84 79 6f 8e 67
-                    </div>
-                  </div>
-                  <div class="text-sm">
-                    <span class="text-gray-500">Parsed String:</span>
-                    <br />
-                    <span class="text-blue-600">ping</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="border-l-4 border-yellow-500 pl-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">
-                      Server → Client: Pong Frame
-                    </span>
-                  </div>
-                  <span class="text-xs text-gray-500">오후 5:59:50</span>
-                </div>
-                <div class="ml-4 space-y-2">
-                  <div class="bg-gray-900 rounded p-3">
-                    <div class="text-xs text-gray-400 mb-2">
-                      Raw Buffer (Hex):
-                    </div>
-                    <div class="text-xs font-mono text-green-400 break-all">
-                      8a 84 7a 6f 8e 67
-                    </div>
-                  </div>
-                  <div class="text-sm">
-                    <span class="text-gray-500">Parsed String:</span>
-                    <br />
-                    <span class="text-blue-600">pong</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-8 text-right">
-          <div class="flex items-center justify-end space-x-2 text-sm text-gray-500">
+        {/* Footer */}
+        <div class="mt-8 text-center">
+          <div class="flex items-center justify-center space-x-2 text-sm text-gray-500">
             <span>Designed by</span>
             <span class="text-orange-500">🦊 Readdy</span>
           </div>
