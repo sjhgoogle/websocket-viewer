@@ -6,7 +6,7 @@ const e = require("express");
 
 require("dotenv").config();
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const HASHING_SALT = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
