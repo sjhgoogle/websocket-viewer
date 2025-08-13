@@ -1,7 +1,7 @@
 import { Router, useRoute, useLocation } from "preact-iso";
 import { Header } from "./common/header";
 
-export function Demo() {
+export function DemoBack3() {
   return (
     <div class="bg-gray-50 min-h-screen">
       <Header />
