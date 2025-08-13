@@ -11,20 +11,13 @@ const PORT = process.env.PORT || 3000;
 const HASHING_SALT = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 const server = net.createServer((socket) => {
-  console.log("Client connected");
-
   socket.on("error", (err) => {
-    console.log("Socket error:", err.message);
     // Don't crash the server, just log the error
   });
 
-  socket.on("close", () => {
-    console.log("Socket closed");
-  });
+  socket.on("close", () => {});
 
   socket.once("data", (data) => {
-    console.log("Received:");
-    // console.log(data.toString());
     const text = data.toString();
 
     const [headerPart, bodyPart] = text.split("\r\n\r\n");
@@ -41,8 +34,6 @@ const server = net.createServer((socket) => {
       const [key, value] = line.split(": ");
       headers[key] = value;
     });
-
-    console.log("path:", reqPath);
 
     const body =
       headers["Content-Type"] === "application/json"
@@ -76,13 +67,25 @@ const server = net.createServer((socket) => {
 
     const targetPath = path.join(__dirname, "../frontend/dist", reqPath);
     console.log("🚀 ~ targetPath:", targetPath);
-    console.log("🚀 ~ targetPath:", fs.existsSync(targetPath));
     if (!fs.existsSync(targetPath)) {
+      // const response = [
+      //   "HTTP/1.1 404 Not Found",
+      //   "Content-Type: text/html",
+      //   "",
+      //   "",
+      // ].join("\r\n");
+      // socket.write(response);
+      // socket.end();
+      // return;
+      const resbody = fs.readFileSync(
+        path.join(__dirname, "../frontend/dist", "index.html"),
+        "utf-8"
+      );
       const response = [
-        "HTTP/1.1 404 Not Found",
-        "Content-Type: text/html",
+        "HTTP/1.1 200 OK",
+        `Content-Type: text/html`,
         "",
-        "",
+        resbody,
       ].join("\r\n");
       socket.write(response);
       socket.end();
@@ -113,14 +116,11 @@ const server = net.createServer((socket) => {
     socket.write(response);
     socket.end();
   });
-  socket.on("close", () => {
-    console.log("TCP client disconnected");
-  });
+  socket.on("close", () => {});
 });
 
 function handleWebSocket(socket, reqMap) {
   const { requestLine, headers } = reqMap;
-  // console.log("🚀 ~ handleWebSocket ~ headers:", headers);
   const key = headers["Sec-WebSocket-Key"];
   const hash = crypto
     .createHash("sha1")
@@ -144,10 +144,8 @@ function handleWebSocket(socket, reqMap) {
     `Sec-WebSocket-Key: ${headers["Sec-WebSocket-Key"]}`,
     `Sec-WebSocket-Version: ${headers["Sec-WebSocket-Version"]}`,
   ];
-  console.log("🚀 ~ handleWebSocket ~ clientWsHeaders:", clientWsHeaders);
 
   const serverWsHeaders = [...response];
-  console.log("🚀 ~ handleWebSocket ~ serverWsHeaders:", serverWsHeaders);
 
   const msgBuffer = makeWsBuffer(
     JSON.stringify({
@@ -189,7 +187,6 @@ function handleWebSocket(socket, reqMap) {
   function analClientBuffer(originBuffer) {
     const res1 = Array.from(originBuffer);
 
-    console.log("🚀 ~ clientBufferAnal ~ originBuffer:", originBuffer);
     // const firstByte = originBuffer[0];
     const secondByte = originBuffer[1];
 
@@ -207,7 +204,6 @@ function handleWebSocket(socket, reqMap) {
         eightType: intByte.toString(2).padStart(8, "0"),
       };
     });
-    console.log("🚀 ~ clientBufferAnal ~ res1:", res1);
 
     const resultMap = [];
 
@@ -263,7 +259,6 @@ function handleWebSocket(socket, reqMap) {
         eightType: intByte.toString(2).padStart(8, "0"),
       };
     });
-    console.log("🚀 ~ clientBufferAnal ~ res1:", res1);
 
     const resultMap = [];
     for (let i = 0; i < res2.length; i++) {
@@ -303,14 +298,11 @@ function handleWebSocket(socket, reqMap) {
     }
 
     const decodedMsg = parseClientMessage(socket, data);
-    console.log("🚀 ~ handleWebSocket ~ decodedMsg:", decodedMsg.slice(0, 20));
 
     // const { msg } = clinetData;
-    console.log("🚀 ~ handleWebSocket ~ msg:", data);
 
     // #### 클라데이터분석
     // const msgBuffer1_1 = makeWsBuffer(data);
-    // console.log("🚀 ~ handleWebSocket ~ qwerqwer:", msgBuffer1_1);
 
     const msgBuffer1_2 = makeWsBuffer(
       JSON.stringify({
@@ -371,15 +363,12 @@ function preetyBinary(binary) {
   const binaryDump = [...binary]
     .map((byte) => byte.toString(2).padStart(8, "0"))
     .slice(0, 20);
-
-  binaryDump.forEach((byte) => console.log(byte));
 }
 
 function checkFin(binary) {
   const firstByte = binary[0];
   const binaryString = firstByte.toString(2).padStart(8, "0");
   const last4Bits = binaryString.slice(4);
-  console.log("🚀 ~ parseClientMessage ~ last4Bits:", last4Bits);
 
   if (last4Bits === "1000") {
     return true;
@@ -402,7 +391,6 @@ function genTime() {
 function parseClientMessage(socket, binary) {
   const secondBinary = binary[1];
   const secondByteStr = secondBinary.toString(2).padStart(8, "0"); // ex 1000 1010
-  console.log("🚀 ~ parseClientMessage ~ secondByteStr:", secondByteStr);
 
   const isMask = secondByteStr[0] === "1"; // 맨앞 1비트
 
@@ -433,8 +421,6 @@ function parseClientMessage(socket, binary) {
     payloadStartIndex = 6; // [6] 부터 페이로드
   }
 
-  console.log("🚀 ~ parseClientMessage ~ payloadLength:", payloadLength);
-
   const maskList = [
     binary[maskStartIndex],
     binary[maskStartIndex + 1],
@@ -457,14 +443,10 @@ function parseClientMessage(socket, binary) {
   const resStr = decodedChars.join("");
   return resStr;
 
-  // console.log("🚀  isMask, payloadLength", isMask, payloadLength);
-
   // 항상 16비트 페이로드 길이 스펙 사용 (126 플래그)
   // let maskStartIndex = 4; // 2-3번째 바이트가 16비트 페이로드 길이
   // let payloadStartIndex = 8; // 마스크 다음부터 페이로드 시작
   // let actualPayloadLength = (binary[2] << 8) | binary[3]; // 16비트 페이로드 길이
-
-  // console.log("🚀  16-bit payload length:", actualPayloadLength);
 
   // // #############
   // const maskList = [
@@ -505,7 +487,6 @@ function makeWsBuffer(message) {
   // const message = `{"clientWsHeaders":["GET / HTTP/1.1","Connection: Upgrade","Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits","Sec-WebSocket-Key: kVKbjCMAKMDqT9+VGnCrfw==","Sec-WebSocket-Version: 13"],"serverWsHeaders":["HTTP/1.1 101 Switching Protocols","Upgrade: websocket","Connection: Upgrade","Sec-WebSocket-Accept: E3XGmPCznQ+H8/SDjeUyY68hJX4=","",""]}`;
 
   const payloadLength = Buffer.byteLength(message, "utf-8");
-  console.log("🚀 ~ sendToClient ~ payloadLength:", payloadLength);
 
   if (payloadLength < 126) {
     const msgBuffer = Buffer.concat([
@@ -551,6 +532,4 @@ function makeWsBuffer(message) {
   }
 }
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+server.listen(PORT, () => {});
