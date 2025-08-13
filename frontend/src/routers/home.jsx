@@ -9,11 +9,10 @@ export function Home() {
         {/* <!-- 헤더 --> */}
         <div class="text-center mb-16">
           <h1 class="text-5xl font-bold text-gray-800 mb-4">
-            WebSocket Protocol Explorer
+            WebSocket 프로토콜 탐색기
           </h1>
           <p class="text-lg text-gray-600">
-            Interactive demonstration of WebSocket handshake, packet exchange,
-            and data encoding
+            WebSocket 핸드셰이크, 패킷 교환, 데이터 인코딩의 인터랙티브 데모
           </p>
         </div>
 
@@ -34,15 +33,15 @@ export function Home() {
                 </div>
               </div>
               <h2 class="card-title text-2xl justify-center mb-4">
-                WebSocket Demo
+                WebSocket 데모
               </h2>
               <p class="text-gray-600 mb-6">
-                See live WebSocket handshake, ping/pong exchanges, and raw
-                buffer data visualization
+                실시간 WebSocket 핸드셰이크, ping/pong 교환, 원시 버퍼 데이터
+                시각화를 확인하세요
               </p>
               <div class="card-actions justify-center">
                 <a href="/demo" class="btn btn-primary btn-lg">
-                  Start Demo
+                  데모 시작
                 </a>
               </div>
             </div>
@@ -63,14 +62,14 @@ export function Home() {
                 </div>
               </div>
               <h2 class="card-title text-2xl justify-center mb-4">
-                Protocol Analysis
+                프로토콜 분석
               </h2>
               <p class="text-gray-600 mb-6">
-                Understand WebSocket frame structure, opcodes, and binary data
-                encoding
+                WebSocket 프레임 구조, opcode, 바이너리 데이터 인코딩을
+                이해하세요
               </p>
               <div class="card-actions justify-center">
-                <button class="btn btn-success btn-lg">Learn More</button>
+                <button class="btn btn-success btn-lg">더 알아보기</button>
               </div>
             </div>
           </div>
@@ -80,7 +79,7 @@ export function Home() {
         <div class="card bg-white shadow-xl">
           <div class="card-body">
             <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">
-              What You'll Learn
+              학습 내용
             </h2>
 
             <div class="grid md:grid-cols-3 gap-8">
@@ -101,8 +100,10 @@ export function Home() {
                     </svg>
                   </div>
                 </div>
-                <h3 class="text-xl font-semibold mb-2">Handshake Process</h3>
-                <p class="text-gray-600">HTTP upgrade to WebSocket protocol</p>
+                <h3 class="text-xl font-semibold mb-2">핸드셰이크 과정</h3>
+                <p class="text-gray-600">
+                  HTTP에서 WebSocket 프로토콜로 업그레이드
+                </p>
               </div>
 
               {/* <!-- Ping/Pong Frames --> */}
@@ -122,8 +123,8 @@ export function Home() {
                     </svg>
                   </div>
                 </div>
-                <h3 class="text-xl font-semibold mb-2">Ping/Pong Frames</h3>
-                <p class="text-gray-600">Keep-alive mechanism visualization</p>
+                <h3 class="text-xl font-semibold mb-2">Ping/Pong 프레임</h3>
+                <p class="text-gray-600">연결 유지 메커니즘 시각화</p>
               </div>
 
               {/* <!-- Binary Data --> */}
@@ -143,10 +144,8 @@ export function Home() {
                     </svg>
                   </div>
                 </div>
-                <h3 class="text-xl font-semibold mb-2">Binary Data</h3>
-                <p class="text-gray-600">
-                  Raw buffer and parsed string display
-                </p>
+                <h3 class="text-xl font-semibold mb-2">바이너리 데이터</h3>
+                <p class="text-gray-600">원시 버퍼와 파싱된 문자열 표시</p>
               </div>
             </div>
           </div>

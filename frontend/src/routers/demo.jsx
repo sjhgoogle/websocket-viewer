@@ -191,7 +191,7 @@ export function Demo() {
                   }`}
                 ></div>
                 <span class="text-lg font-medium text-gray-700">
-                  {isWsConnected.value ? "Connected" : "Disconnected"}
+                  {isWsConnected.value ? "연결됨" : "연결 끊김"}
                 </span>
               </div>
               <span class="text-lg text-gray-500">|</span>
@@ -200,11 +200,11 @@ export function Demo() {
             <div class="flex space-x-3">
               {isWsConnected.value ? (
                 <button onClick={disconnectWs} class="btn btn-error btn-sm">
-                  Disconnect
+                  연결 해제
                 </button>
               ) : (
                 <button onClick={connectWs} class="btn btn-primary btn-sm">
-                  Connect
+                  연결
                 </button>
               )}
             </div>
@@ -216,16 +216,14 @@ export function Demo() {
           {/* Chat Header */}
           <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
             <div class="flex items-center justify-between">
-              <h2 class="text-4xl font-bold text-white">
-                WebSocket Communication
-              </h2>
+              <h2 class="text-4xl font-bold text-white">WebSocket 통신</h2>
               <div class="flex items-center space-x-4 text-white text-lg">
                 <div class="flex items-center space-x-2">
                   <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>Live</span>
+                  <span>실시간</span>
                 </div>
                 <span>|</span>
-                <span>Real-time Protocol Analysis</span>
+                <span>실시간 프로토콜 분석</span>
               </div>
             </div>
           </div>
@@ -240,7 +238,7 @@ export function Demo() {
                   </div>
                   <div class="bg-blue-100 rounded-2xl rounded-tl-md px-4 py-3">
                     <div class="text-xl font-medium text-blue-900 mb-1">
-                      Client
+                      클라이언트
                     </div>
                     <div class="text-lg text-blue-800">
                       <div class="font-mono text-base bg-blue-200 rounded px-2 py-1 mb-2">
@@ -267,7 +265,7 @@ export function Demo() {
                   </div>
                   <div class="bg-green-100 rounded-2xl rounded-tr-md px-4 py-3">
                     <div class="text-xl font-medium text-green-900 mb-1">
-                      Server
+                      서버
                     </div>
                     <div class="text-lg text-green-800">
                       <div class="font-mono text-base bg-green-200 rounded px-2 py-1 mb-2">
@@ -320,7 +318,7 @@ export function Demo() {
                           isClient ? "text-blue-900" : "text-green-900"
                         }`}
                       >
-                        {isClient ? "Client" : "Server"}
+                        {isClient ? "클라이언트" : "서버"}
                       </div>
 
                       {/* 프레임 타입 */}
@@ -334,14 +332,14 @@ export function Demo() {
 
                       {/* Raw 데이터 */}
                       <div class="text-base">
-                        <span class="text-gray-500">Raw:</span>
+                        <span class="text-gray-500">원시 데이터:</span>
                         <div class="bg-gray-900 text-green-400 p-2 rounded mt-1 font-mono">
                           {message.eightArr.map((eight) => {
                             return <div>{eight}</div>;
                           })}
                         </div>
                         {/* 페이로드 */}
-                        <span class="text-gray-500">Payload:</span>
+                        <span class="text-gray-500">페이로드:</span>
                         타입: {message.frameType} 길이: {message.frameLength}
                       </div>
 
@@ -365,7 +363,7 @@ export function Demo() {
             <div class="flex space-x-3">
               <input
                 type="text"
-                placeholder="Type a message to send..."
+                placeholder="보낼 메시지를 입력하세요..."
                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={chatInput.value}
                 onInput={inputHandler}
@@ -380,7 +378,7 @@ export function Demo() {
                 class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
                 onClick={sendChat}
               >
-                Send {chatArr.value.length}
+                전송 {chatArr.value.length}
               </button>
             </div>
           </div>
@@ -389,7 +387,7 @@ export function Demo() {
         {/* Footer */}
         <div class="mt-8 text-center">
           <div class="flex items-center justify-center space-x-2 text-lg text-gray-500">
-            <span>made by</span>
+            <span>제작자</span>
             <span class="text-purple-500">sjh</span>
           </div>
         </div>
