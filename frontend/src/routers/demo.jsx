@@ -4,12 +4,18 @@ import { useSignalEffect, useSignal } from "@preact/signals";
 
 import { useRef } from "preact/hooks";
 
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
+
 export function Demo() {
   const count = useSignal(0);
   const wsUrl = useSignal("ws://localhost:3000");
   const isWsConnected = useSignal(false);
-
+  const connectBtn = useRef(null);
+  const chatInputRef = useRef(null);
   const chatInput = useSignal("");
+  const clientHandshakeRef = useRef(null);
+  const serverHandshakeRef = useRef(null);
 
   function sendChat() {
     const msg = chatInput.value;
@@ -71,9 +77,74 @@ export function Demo() {
 
     // console.log("isWsConnected", clientHandshake.value.headers);
     // connectWs();
+
+    driverInit();
   }, []);
 
+  let driverObj = null;
+
+  async function driverInit() {
+    console.log("driverInit", driverObj);
+
+    if (driverObj) {
+      return;
+    }
+
+    driverObj = driver({
+      showProgress: true,
+      steps: [
+        {
+          element: connectBtn.current,
+          popover: {
+            title: "웹소켓 연결",
+            description: "웹소켓 연결을 시도합니다",
+
+            onNextClick: async (element) => {
+              await connectWs();
+
+              // next tick
+              requestAnimationFrame(() => {
+                driverObj.moveNext();
+              });
+            },
+          },
+        },
+        {
+          element: clientHandshakeRef.current,
+          popover: {
+            title: "클라이언트 핸드쉐이크",
+            description:
+              "클라이언트 핸드쉐이크 의 Sec-WebSocket-Key를 확인합니다",
+          },
+        },
+        {
+          element: serverHandshakeRef.current,
+          popover: {
+            title: "서버 핸드쉐이크",
+            description: "서버 핸드쉐이크 의 Sec-WebSocket-Accept를 확인합니다",
+          },
+        },
+        {
+          element: chatInputRef.current,
+          popover: {
+            title: "채팅 입력",
+            description: "채팅 입력해보고 실제 오가는 바이너리를 확인합니다.",
+          },
+        },
+      ],
+    });
+
+    driverObj.drive();
+  }
+
   async function connectWs() {
+    let _resolve = null;
+    let _reject = null;
+    const tmpPromise = new Promise((resolve, reject) => {
+      _resolve = resolve;
+      _reject = reject;
+    });
+
     const ws = new WebSocket(wsUrl.value);
 
     wsSignal.value = ws;
@@ -81,6 +152,8 @@ export function Demo() {
     wsSignal.value.onopen = () => {
       console.log("ws connected");
       isWsConnected.value = true;
+
+      _resolve();
 
       // 페이로드 길이에따른 binary[1] 값
       // 작은페이로드 : 10000000 ~ 11111101 (0~125)
@@ -169,6 +242,8 @@ export function Demo() {
     };
 
     wsSignal.value.onclose = () => {};
+
+    return tmpPromise;
   }
 
   async function disconnectWs() {
@@ -203,7 +278,11 @@ export function Demo() {
                   연결 해제
                 </button>
               ) : (
-                <button onClick={connectWs} class="btn btn-primary btn-sm">
+                <button
+                  ref={connectBtn}
+                  onClick={connectWs}
+                  class="btn btn-primary btn-sm"
+                >
                   연결
                 </button>
               )}
@@ -231,7 +310,7 @@ export function Demo() {
           {/* Chat Messages */}
           <div ref={chatArea} class="p-6 space-y-6 max-h-196 overflow-y-auto">
             {clientHandshake.value.headers.length > 0 && (
-              <div class="flex justify-start">
+              <div ref={clientHandshakeRef} class="flex justify-start">
                 <div class="flex items-start space-x-3 max-w-lg">
                   <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     C
@@ -258,7 +337,7 @@ export function Demo() {
 
             {/* Server Response - Connection Established */}
             {serverHandshake.value.headers.length > 0 && (
-              <div class="flex justify-end">
+              <div ref={serverHandshakeRef} class="flex justify-end">
                 <div class="flex items-start space-x-3 max-w-lg">
                   <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     S
@@ -362,6 +441,7 @@ export function Demo() {
           <div class="border-t border-gray-200 p-4 bg-gray-50">
             <div class="flex space-x-3">
               <input
+                ref={chatInputRef}
                 type="text"
                 placeholder="보낼 메시지를 입력하세요..."
                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -378,7 +458,7 @@ export function Demo() {
                 class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
                 onClick={sendChat}
               >
-                전송 {chatArr.value.length}
+                전송
               </button>
             </div>
           </div>
