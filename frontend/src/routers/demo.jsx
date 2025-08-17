@@ -9,7 +9,13 @@ import "driver.js/dist/driver.css";
 
 export function Demo() {
   const count = useSignal(0);
-  const wsUrl = useSignal("ws://localhost:3000");
+
+  const wsStr = `${location.protocol === "https:" ? "wss" : "ws"}://${
+    location.host
+  }`;
+
+  const wsUrl = useSignal(wsStr);
+
   const isWsConnected = useSignal(false);
   const connectBtn = useRef(null);
   const chatInputRef = useRef(null);
