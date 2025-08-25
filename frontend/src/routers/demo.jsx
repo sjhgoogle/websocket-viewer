@@ -88,15 +88,15 @@ export function Demo() {
     // console.log("isWsConnected", clientHandshake.value.headers);
     // connectWs();
 
-    // driverInit();
+    driverInit();
 
-    connectWs().then(() => {
-      chatInput.value = "abc"
+    // connectWs().then(() => {
+    //   chatInput.value = "abc"
       
-      setTimeout(() => {
-        sendChat();
-      }, 200);
-    })
+    //   setTimeout(() => {
+    //     sendChat();
+    //   }, 200);
+    // })
   }, []);
 
   let driverObj = null;
@@ -128,7 +128,7 @@ export function Demo() {
           },
         },
         {
-          element: clientHandshakeRef.current,
+          element: document.getElementById("clientHandshakeRef"),
           popover: {
             title: "클라이언트 핸드쉐이크",
             description:
@@ -331,7 +331,7 @@ export function Demo() {
           {/* Chat Messages */}
           <div ref={chatArea} class="p-6 space-y-6 max-h-196 overflow-y-auto">
             {clientHandshake.value.headers.length > 0 && (
-              <div ref={clientHandshakeRef} class="flex justify-start">
+              <div id="clientHandshakeRef" ref={clientHandshakeRef} class="flex justify-start">
                 <div class="flex items-start space-x-3 max-w-lg">
                   <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     C
