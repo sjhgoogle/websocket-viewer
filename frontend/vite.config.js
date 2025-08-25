@@ -8,8 +8,19 @@ export default defineConfig({
 
   server: {
     port: 5000,
+    // proxy: {
+    //   "/api": "http://localhost:3000", // 백엔드 API 프록시
+
+    //   ws: true, // <--- 웹소켓 프록시 활성화
+    // },
+
     proxy: {
-      "/api": "http://localhost:3000", // 백엔드 API 프록시
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""), // <--- /api 제거
+        ws: true, // <--- 웹소켓 프록시 활성화
+      },
     },
   },
 });

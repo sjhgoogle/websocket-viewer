@@ -28,6 +28,7 @@ const server = net.createServer((socket) => {
 
     const [method, _reqPath, version] = requestLine.split(" ");
     const reqPath = _reqPath === "/" ? "/index.html" : _reqPath;
+    console.log("🚀 ~ reqPath:", reqPath);
 
     const headers = {};
     headerLine.forEach((line) => {
@@ -53,7 +54,15 @@ const server = net.createServer((socket) => {
     // ######################## parse fin
     // ######################## parse fin
 
-    const isUpgrade = headers["Upgrade"] === "websocket";
+    const upgradeHeader = headers["upgrade"] || headers["Upgrade"] || "";
+
+    // 대소문자 구분 없이 체크
+    const isUpgrade = upgradeHeader.toLowerCase() === "websocket";
+    console.log("🚀 ~ isUpgrade:", isUpgrade);
+
+    // const isUpgrade = (headers["upgrade"] || headers["Upgrade"]) === "websocket";
+    // console.log("🚀 ~ headers:", headers)
+    // console.log("🚀 ~ isUpgrade:", isUpgrade)
 
     if (isUpgrade) {
       handleWebSocket(socket, reqMap);
@@ -135,6 +144,7 @@ function handleWebSocket(socket, reqMap) {
     "",
     "",
   ];
+  console.log("🚀 ~ handleWebSocket ~ response:", response);
   socket.write(response.join("\r\n"));
 
   const clientWsHeaders = [
@@ -226,6 +236,8 @@ function handleWebSocket(socket, reqMap) {
       } else {
         // 데이터겟죠..?
         rowType = "데이터 타입";
+
+        targetAskii = String.fromCharCode(_innerMap.intType);
       }
 
       const innerMap = {
@@ -234,13 +246,110 @@ function handleWebSocket(socket, reqMap) {
         // hexType: byte.toString(16).padStart(2, "0"),
         // eightType: byte.toString(2).padStart(8, "0"),
         rowType: rowType,
+        targetAskii: targetAskii,
       };
+      resultMap.push(innerMap);
     }
 
     return resultMap;
   }
 
   function analServerBuffer(originBuffer) {
+    const res1 = Array.from(originBuffer);
+
+    const secondByte = originBuffer[1];
+    const secondByteStr = secondByte.toString(2).padStart(8, "0");
+
+    const isMiddleSizeWs = secondByteStr === "01111110";
+    const payloadStartIndex = isMiddleSizeWs ? 4 : 2;
+    const payloadLength = res1.length - payloadStartIndex;
+
+    // payload 부분 추출
+    const rawPayload = res1.slice(
+      payloadStartIndex,
+      payloadStartIndex + payloadLength
+    );
+
+    // 🔑 UTF-8로 디코딩 (서버쪽은 마스크 없음)
+    const decodedText = new TextDecoder("utf-8").decode(
+      new Uint8Array(rawPayload)
+    );
+
+    // 글자 단위 매핑 (UTF-8 한글 처리: 첫 바이트만 글자, 나머지는 "")
+    function parseUtf8Chars(bytes) {
+      const results = [];
+      let i = 0;
+
+      while (i < bytes.length) {
+        const byte = bytes[i];
+
+        let charLen = 1;
+        if (byte >> 5 === 0b110) charLen = 2; // 2바이트 문자
+        else if (byte >> 4 === 0b1110) charLen = 3; // 3바이트 문자 (한글)
+        else if (byte >> 3 === 0b11110) charLen = 4; // 4바이트 문자 (이모지)
+
+        const charBytes = bytes.slice(i, i + charLen);
+        const char = new TextDecoder("utf-8").decode(charBytes);
+
+        results.push(char); // 첫 바이트 = 글자
+        for (let j = 1; j < charLen; j++) {
+          results.push(""); // 나머지 바이트 = 빈 문자열
+        }
+
+        i += charLen;
+      }
+
+      return results;
+    }
+
+    const decodedPerByte = parseUtf8Chars(new Uint8Array(rawPayload));
+
+    // 최종 디버깅용 매핑
+    const resultMap = [];
+    for (let i = 0; i < res1.length; i++) {
+      const intByte = res1[i];
+      const eightType = intByte.toString(2).padStart(8, "0");
+
+      const isData = i >= payloadStartIndex;
+
+      const innerMap = {
+        intType: intByte,
+        hexType: intByte.toString(16).padStart(2, "0"),
+        eightType: eightType,
+        originByte0100: eightType,
+      };
+
+      if (i === 0) {
+        innerMap["rowType"] = "1번쨰줄 그거";
+      } else if (i === 1) {
+        innerMap["rowType"] = "2번쨰줄 그거";
+      } else if (i < payloadStartIndex) {
+        innerMap["rowType"] = "데이터가 길어서 미들";
+      } else if (isData) {
+        const payloadIndex = i - payloadStartIndex;
+        const originnum = rawPayload[payloadIndex];
+
+        innerMap["rowType"] = "PAYLOAD";
+        innerMap["isData"] = true;
+        innerMap["originum"] = originnum;
+        innerMap["origin"] = String.fromCharCode(originnum); // 원래 바이트 단위 해석 (깨질 수 있음)
+        innerMap["decoded"] = decodedPerByte[payloadIndex]; // ✅ UTF-8 글자 단위 매핑
+        innerMap["decoded0100"] =
+          decodedPerByte[payloadIndex] !== ""
+            ? decodedPerByte[payloadIndex]
+                .charCodeAt(0)
+                .toString(2)
+                .padStart(8, "0")
+            : "";
+      }
+
+      resultMap.push(innerMap);
+    }
+
+    return resultMap;
+  }
+
+  function analServerBuffer2(originBuffer) {
     const res1 = Array.from(originBuffer);
 
     // const firstByte = originBuffer[0];
@@ -297,7 +406,9 @@ function handleWebSocket(socket, reqMap) {
       return;
     }
 
-    const decodedMsg = parseClientMessage(socket, data);
+    const decodedMsg = parseClientMessage(data);
+    const decodedMsg2 = parseClientMessageByte(data);
+    console.log("🚀 ~ handleWebSocket ~ decodedMsg2:", decodedMsg2);
 
     // const { msg } = clinetData;
 
@@ -319,7 +430,8 @@ function handleWebSocket(socket, reqMap) {
           frameType: getFrameType(decodedMsg).frameType,
           frameLength: getFrameType(decodedMsg).frameLength,
 
-          analBuffer: analClientBuffer(data),
+          // analBuffer: analClientBuffer(data),
+          analBuffer: parseClientMessageByte(data),
         },
       })
     );
@@ -329,6 +441,8 @@ function handleWebSocket(socket, reqMap) {
     // ### 클라데이터 분석 끝
 
     // ### 서버 퐁 시작
+
+    // return;
 
     const serverOriginMsg = `im bot : ${decodedMsg}`;
 
@@ -363,6 +477,7 @@ function preetyBinary(binary) {
   const binaryDump = [...binary]
     .map((byte) => byte.toString(2).padStart(8, "0"))
     .slice(0, 20);
+  console.log("🚀 ~ preetyBinary ~ binaryDump:", binaryDump);
 }
 
 function checkFin(binary) {
@@ -388,7 +503,7 @@ function genTime() {
   return time;
 }
 
-function parseClientMessage(socket, binary) {
+function parseClientMessageByte2(binary) {
   const secondBinary = binary[1];
   const secondByteStr = secondBinary.toString(2).padStart(8, "0"); // ex 1000 1010
 
@@ -440,7 +555,251 @@ function parseClientMessage(socket, binary) {
     decodedChars.push(String.fromCharCode(decodedByte));
   }
 
-  const resStr = decodedChars.join("");
+  const rere = [];
+
+  for (let i = 0; i < binary.length; i++) {
+    //
+    const originByte = binary[i];
+    const originByte0100 = originByte.toString(2).padStart(8, "0");
+
+    const isData = i >= payloadStartIndex;
+
+    const ojbjbj = {
+      intType: originByte,
+      originByte0100: originByte0100,
+    };
+    if (isData) {
+      ojbjbj["isData"] = true;
+
+      const originnum = rawPayload[i - payloadStartIndex];
+      const originn = String.fromCharCode(originnum);
+      const decoded = decodedChars[i - payloadStartIndex];
+
+      ojbjbj["originum"] = originnum;
+      // ojbjbj["origi0100"] = originByte.toString(2).padStart(8, "0");
+
+      ojbjbj["origin"] = originn;
+      ojbjbj["decoded"] = decoded;
+      ojbjbj["decoded0100"] = decoded
+        .charCodeAt(0)
+        .toString(2)
+        .padStart(8, "0");
+
+      ojbjbj["pairMask"] = maskList[(i - payloadStartIndex) % 4];
+      ojbjbj["pairMask0100"] = maskList[(i - payloadStartIndex) % 4]
+        .toString(2)
+        .padStart(8, "0");
+    }
+
+    rere.push(ojbjbj);
+  }
+  console.log("🚀 ~ parseClientMessageByte ~ rere:", rere);
+
+  return rere;
+}
+
+function parseClientMessageByte(binary) {
+  const secondBinary = binary[1];
+  const secondByteStr = secondBinary.toString(2).padStart(8, "0"); // ex 1000 1010
+
+  const isMask = secondByteStr[0] === "1"; // 맨앞 1비트
+  const payloadLengthBits = secondByteStr.slice(1);
+
+  let payloadLength;
+  let maskStartIndex;
+  let payloadStartIndex;
+
+  if (secondByteStr === "11111111") {
+    throw new Error("Payload too large, not supported");
+  } else if (secondByteStr === "11111110") {
+    // 126~65535
+    const byteUpper = binary[2];
+    const byteLower = binary[3];
+    payloadLength = (byteUpper << 8) | byteLower;
+    maskStartIndex = 4; // [4], [5], [6], [7]  마스크
+    payloadStartIndex = 8; // [8] 부터 페이로드
+  } else {
+    // 작은 크기 0~125
+    payloadLength = parseInt(payloadLengthBits, 2);
+    maskStartIndex = 2; // [2], [3], [4], [5]  마스크
+    payloadStartIndex = 6; // [6] 부터 페이로드
+  }
+
+  const maskList = [
+    binary[maskStartIndex],
+    binary[maskStartIndex + 1],
+    binary[maskStartIndex + 2],
+    binary[maskStartIndex + 3],
+  ];
+  const rawPayload = binary.slice(
+    payloadStartIndex,
+    payloadStartIndex + payloadLength
+  );
+
+  // XOR 해서 실제 payload 복원
+  const decodedBytes = new Uint8Array(payloadLength);
+  for (let i = 0; i < payloadLength; i++) {
+    decodedBytes[i] = rawPayload[i] ^ maskList[i % 4];
+  }
+
+  // 🔑 UTF-8 글자 단위 매핑
+  function parseUtf8Chars(bytes) {
+    const results = [];
+    let i = 0;
+
+    while (i < bytes.length) {
+      const byte = bytes[i];
+
+      let charLen = 1;
+      if (byte >> 5 === 0b110) charLen = 2; // 2바이트 문자
+      else if (byte >> 4 === 0b1110) charLen = 3; // 3바이트 문자 (한글)
+      else if (byte >> 3 === 0b11110) charLen = 4; // 4바이트 문자 (이모지)
+
+      const charBytes = bytes.slice(i, i + charLen);
+      const char = new TextDecoder("utf-8").decode(charBytes);
+
+      // 첫 바이트에는 문자, 나머지는 ""
+      results.push(char);
+      for (let j = 1; j < charLen; j++) {
+        results.push("");
+      }
+
+      i += charLen;
+    }
+
+    return results;
+  }
+
+  const decodedPerByte = parseUtf8Chars(decodedBytes);
+
+  // 디버깅용 정보 배열
+  const rere = [];
+
+  for (let i = 0; i < binary.length; i++) {
+    const originByte = binary[i];
+    const originByte0100 = originByte.toString(2).padStart(8, "0");
+
+    const isData = i >= payloadStartIndex;
+
+    const ojbjbj = {
+      intType: originByte,
+      originByte0100: originByte0100,
+    };
+
+    // if (isData) {
+    //   const payloadIndex = i - payloadStartIndex;
+    //   const originnum = rawPayload[payloadIndex];
+    //   const originn = String.fromCharCode(originnum);
+
+    //   ojbjbj["isData"] = true;
+    //   ojbjbj["originum"] = originnum;
+    //   ojbjbj["origin"] = originn;
+    //   ojbjbj["decoded"] = decodedPerByte[payloadIndex]; // ✅ 글자 단위 매핑
+    //   if (decodedPerByte[payloadIndex] !== "") {
+    //     ojbjbj["decoded0100"] = decodedPerByte[payloadIndex]
+    //       .charCodeAt(0)
+    //       .toString(2)
+    //       .padStart(8, "0");
+    //   } else {
+    //     ojbjbj["decoded0100"] = "";
+    //   }
+    //   ojbjbj["pairMask"] = maskList[payloadIndex % 4];
+    //   ojbjbj["pairMask0100"] = maskList[payloadIndex % 4]
+    //     .toString(2)
+    //     .padStart(8, "0");
+    // }
+
+    if (isData) {
+      const payloadIndex = i - payloadStartIndex;
+      const originnum = rawPayload[payloadIndex];
+      const originn = String.fromCharCode(originnum);
+
+      ojbjbj["isData"] = true;
+      ojbjbj["originum"] = originnum;
+      ojbjbj["origin"] = originn;
+      ojbjbj["decoded"] = decodedPerByte[payloadIndex]; // ✅ 글자 단위 매핑
+
+      // 🔑 decoded0100 = 실제 복원된 바이트의 8비트 이진 표현
+      ojbjbj["decoded0100"] = decodedBytes[payloadIndex]
+        .toString(2)
+        .padStart(8, "0");
+
+      ojbjbj["pairMask"] = maskList[payloadIndex % 4];
+      ojbjbj["pairMask0100"] = maskList[payloadIndex % 4]
+        .toString(2)
+        .padStart(8, "0");
+    }
+
+    rere.push(ojbjbj);
+  }
+
+  console.log("🚀 ~ parseClientMessageByte ~ rere:", rere);
+  return rere;
+}
+
+function parseClientMessage(binary) {
+  const secondBinary = binary[1];
+  const secondByteStr = secondBinary.toString(2).padStart(8, "0"); // ex 1000 1010
+
+  const isMask = secondByteStr[0] === "1"; // 맨앞 1비트
+
+  // const payloadLength = parseInt(binaryString.slice(1), 2); // 뒤 7비트
+
+  const payloadLengthBits = secondByteStr.slice(1);
+
+  let payloadLength;
+  let maskStartIndex;
+  let payloadStartIndex;
+
+  if (secondByteStr === "11111111") {
+    throw new Error("Payload too large, not supported");
+  } else if (secondByteStr === "11111110") {
+    // 126~65535
+    // const payloadLength = parseInt(payloadLengthBits, 2);
+    // return payloadLength;
+
+    const byteUpper = binary[2].toString(2).padStart(8, "0");
+    const byteLower = binary[3].toString(2).padStart(8, "0");
+    payloadLength = parseInt(byteUpper + byteLower, 2);
+    maskStartIndex = 4; // [4], [5], [6], [7]  마스크
+    payloadStartIndex = 8; // [8] 부터 페이로드
+  } else {
+    // 작은 크기 0~125
+    payloadLength = parseInt(payloadLengthBits, 2);
+    maskStartIndex = 2; // [2], [3], [4], [5]  마스크
+    payloadStartIndex = 6; // [6] 부터 페이로드
+  }
+
+  const maskList = [
+    binary[maskStartIndex],
+    binary[maskStartIndex + 1],
+    binary[maskStartIndex + 2],
+    binary[maskStartIndex + 3],
+  ];
+  const rawPayload = binary.slice(
+    payloadStartIndex,
+    payloadStartIndex + payloadLength
+  );
+
+  // const decodedChars = [];
+
+  // for (let i = 0; i < payloadLength; i++) {
+  //   const maskIndex = i % 4;
+  //   const decodedByte = rawPayload[i] ^ maskList[maskIndex]; // XOR 연산으로 실제값 디코딩
+  //   decodedChars.push(String.fromCharCode(decodedByte));
+  // }
+
+  // const resStr = decodedChars.join("");
+  // return resStr;
+
+  const decodedBytes = new Uint8Array(payloadLength);
+
+  for (let i = 0; i < payloadLength; i++) {
+    const maskIndex = i % 4;
+    decodedBytes[i] = rawPayload[i] ^ maskList[maskIndex]; // XOR 연산으로 실제값 디코딩
+  }
+
+  const resStr = new TextDecoder("utf-8").decode(decodedBytes);
   return resStr;
 
   // 항상 16비트 페이로드 길이 스펙 사용 (126 플래그)

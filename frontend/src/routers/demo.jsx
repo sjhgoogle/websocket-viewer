@@ -10,7 +10,11 @@ import "driver.js/dist/driver.css";
 export function Demo() {
   const count = useSignal(0);
 
-  const wsStr = `${location.protocol === "https:" ? "wss" : "ws"}://${
+  // check is dev
+  const isDev = import.meta.env.DEV;
+  const devPath = `ws://localhost:3000`;
+  
+  const wsStr =  isDev ? devPath: `${location.protocol === "https:" ? "wss" : "ws"}://${
     location.host
   }`;
 
@@ -75,7 +79,7 @@ export function Demo() {
   });
 
   useSignalEffect(() => {
-    console.log("isWsConnected", isWsConnected.value);
+    // console.log("isWsConnected", isWsConnected.value);
     // console.log("isWsConnected", clientHandshake.value.headers);
     // clientHandshake.value = {
     //   headers: ["!!!EFIE"],
@@ -84,7 +88,15 @@ export function Demo() {
     // console.log("isWsConnected", clientHandshake.value.headers);
     // connectWs();
 
-    driverInit();
+    // driverInit();
+
+    connectWs().then(() => {
+      chatInput.value = "abc"
+      
+      setTimeout(() => {
+        sendChat();
+      }, 200);
+    })
   }, []);
 
   let driverObj = null;
@@ -224,7 +236,7 @@ export function Demo() {
         const { time, sender, originMsg, intArr, eightArr, analBuffer } = msg;
 
         chatArr.value = [
-          ...chatArr.value,
+          ...chatArr.value, //기존 배열 복사
           {
             time: time,
             originMsg: originMsg,
@@ -238,8 +250,11 @@ export function Demo() {
 
             sender: sender,
             type: "text",
+
+            analBuffer: analBuffer,
           },
         ];
+        
 
         requestAnimationFrame(() => {
           chatArea.current.scrollTop = chatArea.current.scrollHeight;
@@ -419,9 +434,24 @@ export function Demo() {
                       <div class="text-base">
                         <span class="text-gray-500">원시 데이터:</span>
                         <div class="bg-gray-900 text-green-400 p-2 rounded mt-1 font-mono">
-                          {message.eightArr.map((eight) => {
-                            return <div>{eight}</div>;
-                          })}
+                          {
+                            message.analBuffer.map((anal) => {
+                              return (
+                                <div class="flex space-x-2">
+                                  {/* <div>{JSON.stringify(anal)}</div> */}
+                                  <div>{anal.originByte0100}</div>
+                                  <div>{(anal.isData && isClient) ? ' x ' + anal.pairMask0100 : ''}</div>
+                                  <div>{(anal.isData && isClient) ? ' x ' + anal.decoded0100 : ''}</div>
+                                  <div>{anal.isData ? anal.decoded : ''}</div>
+                                </div>
+                            );
+                            })
+                          }
+                          {
+                            // message.eightArr.map((eight) => {
+                            // return <div>{eight}</div>;
+                            // })
+                          }
                         </div>
                         {/* 페이로드 */}
                         <span class="text-gray-500">페이로드:</span>
